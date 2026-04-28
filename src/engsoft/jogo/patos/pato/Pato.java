@@ -1,17 +1,25 @@
 package engsoft.jogo.patos.pato;
 
+import engsoft.jogo.patos.comportamento.correr.NaoCorre;
+import engsoft.jogo.patos.comportamento.correr.PadraoCorreveis;
+import engsoft.jogo.patos.comportamento.pular.NaoPula;
 import engsoft.jogo.patos.comportamento.pular.PadraoPulaveis;
+import engsoft.jogo.patos.comportamento.voar.NaoVoa;
 import engsoft.jogo.patos.comportamento.voar.PadraoVoaveis;
 
 /**
- * Base abstract duck. Holds the flying and jumping strategies as fields so
- * concrete ducks can be configured at construction time and reconfigured at
- * runtime via the corresponding setters.
+ * Base abstract duck. Holds the flying, jumping and running strategies as
+ * fields so concrete ducks can be configured at construction time and
+ * reconfigured at runtime via the corresponding setters.
+ *
+ * Fields default to null-object strategies so subclasses that do not opt into
+ * a behavior still produce sensible output instead of NullPointerException.
  */
 public abstract class Pato {
 
-    protected PadraoVoaveis comportamentoPato;
-    protected PadraoPulaveis comportamentoPulo;
+    protected PadraoVoaveis comportamentoPato = new NaoVoa();
+    protected PadraoPulaveis comportamentoPulo = new NaoPula();
+    protected PadraoCorreveis comportamentoCorrer = new NaoCorre();
 
     /**
      * Returns a description identifying the concrete duck.
@@ -48,6 +56,15 @@ public abstract class Pato {
     }
 
     /**
+     * Replaces the current running strategy.
+     *
+     * @param padrao the new running strategy
+     */
+    public void setComportamentoCorrer(final PadraoCorreveis padrao) {
+        this.comportamentoCorrer = padrao;
+    }
+
+    /**
      * Delegates flying to the configured {@link PadraoVoaveis}.
      *
      * @return the description produced by the current flying strategy
@@ -63,6 +80,15 @@ public abstract class Pato {
      */
     public String pular() {
         return comportamentoPulo.pular();
+    }
+
+    /**
+     * Delegates running to the configured {@link PadraoCorreveis}.
+     *
+     * @return the description produced by the current running strategy
+     */
+    public String correr() {
+        return comportamentoCorrer.correr();
     }
 
 }

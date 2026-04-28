@@ -1,9 +1,11 @@
 # Jogo dos Patos — Padrão Strategy
 
 Implementação em Java da clássica simulação de patos do livro
-*Head First Design Patterns*, estendida com um comportamento de pulo e com a
-classe `Coelho`, que reaproveita o mesmo mecanismo de pulo por composição em
-vez de herança.
+*Head First Design Patterns*, estendida com comportamentos de pulo e corrida e
+com a classe `Coelho`, que reaproveita o mesmo mecanismo de pulo por composição
+em vez de herança. Os campos de estratégia em `Pato` recebem por padrão objetos
+nulos (`NaoVoa`, `NaoPula`, `NaoCorre`), garantindo que toda delegação seja
+segura mesmo quando um pato não opta por um comportamento.
 
 O código é a entrega de um exercício de POO (Profa. Andréia D. Leles)
 abordando: classes abstratas, herança, polimorfismo, interfaces, composição,
@@ -26,16 +28,25 @@ engsoft.jogo.patos.pato                  Pato abstrato + patos concretos
 engsoft.jogo.patos.comportamento.voar    Estratégia de voo + implementações
 engsoft.jogo.patos.comportamento.grasnar Estratégia de grasno + implementações
 engsoft.jogo.patos.comportamento.pular   Estratégia de pulo + implementações
+engsoft.jogo.patos.comportamento.correr  Estratégia de corrida + implementações
 ```
 
 ## Arquitetura
 
 O padrão Strategy desacopla *o que um pato faz* de *como ele faz*. As
-responsabilidades de voar e pular são extraídas para interfaces
-(`PadraoVoaveis`, `PadraoPulaveis`) com várias implementações, e `Pato`
-mantém referências a elas como atributos. Os patos concretos plugam as
-estratégias em seus construtores; os setters permitem trocá-las em tempo
-de execução.
+responsabilidades de voar, pular e correr são extraídas para interfaces
+(`PadraoVoaveis`, `PadraoPulaveis`, `PadraoCorreveis`) com várias
+implementações, e `Pato` mantém referências a elas como atributos. Os patos
+concretos plugam as estratégias em seus construtores; os setters permitem
+trocá-las em tempo de execução.
+
+Os três campos de estratégia em `Pato` são inicializados com objetos nulos
+(`NaoVoa`, `NaoPula`, `NaoCorre`). Isso garante que `voar()`, `pular()` e
+`correr()` sejam sempre delegáveis com segurança, mesmo quando um pato
+concreto não opta por aquele comportamento. Antes dessa correção, chamar
+`pular()` em um `PatoBorracha`, `PatoBravo` ou `PatoRuivo` lançava
+`NullPointerException`, porque esses patos nunca atribuíam
+`comportamentoPulo` — o problema clássico de delegação sem default seguro.
 
 `PadraoGrasnar` é implementada diretamente pelos patos que grasnam — ela
 *não* é uma estratégia mantida por `Pato`, então patos que não grasnam
@@ -57,12 +68,15 @@ classDiagram
         <<abstract>>
         #PadraoVoaveis comportamentoPato
         #PadraoPulaveis comportamentoPulo
+        #PadraoCorreveis comportamentoCorrer
         +mostrar()* String
         +nadar() String
         +voar() String
         +pular() String
+        +correr() String
         +setComportamento(PadraoVoaveis)
         +setComportamentoPulo(PadraoPulaveis)
+        +setComportamentoCorrer(PadraoCorreveis)
     }
 
     class PatoRuivo
@@ -94,6 +108,15 @@ classDiagram
     class PuloAlto
     class PuloDesordenado
     class PuloCertinho
+    class NaoPula
+
+    class PadraoCorreveis {
+        <<interface>>
+        +correr() String
+    }
+    class CorrerRapido
+    class CorrerLento
+    class NaoCorre
 
     class Coelho {
         -PadraoPulaveis comportamentoPulo
@@ -120,9 +143,15 @@ classDiagram
     PadraoPulaveis <|.. PuloAlto
     PadraoPulaveis <|.. PuloDesordenado
     PadraoPulaveis <|.. PuloCertinho
+    PadraoPulaveis <|.. NaoPula
+
+    PadraoCorreveis <|.. CorrerRapido
+    PadraoCorreveis <|.. CorrerLento
+    PadraoCorreveis <|.. NaoCorre
 
     Pato o--> PadraoVoaveis : comportamentoPato
     Pato o--> PadraoPulaveis : comportamentoPulo
+    Pato o--> PadraoCorreveis : comportamentoCorrer
     Coelho o--> PadraoPulaveis : comportamentoPulo
 ```
 
@@ -130,8 +159,9 @@ classDiagram
 
 Chamar `pato.voar()` não executa lógica de voo dentro de `Pato`. A chamada
 é repassada para a instância de `PadraoVoaveis` que estiver atualmente em
-`comportamentoPato`. A mesma indireção vale para o pulo. É essa indireção
-que torna possível a troca de comportamento em tempo de execução.
+`comportamentoPato`. A mesma indireção vale para o pulo e para a corrida.
+É essa indireção que torna possível a troca de comportamento em tempo de
+execução.
 
 ```mermaid
 sequenceDiagram
@@ -174,12 +204,32 @@ Partes B e C foram adicionadas em cima dela.
   classe existente foi alterada — adicionar novos estilos de pulo só exige
   novas implementações de `PadraoPulaveis` (princípio Aberto/Fechado).
 
+### Parte B2 — comportamento de correr
+
+- **Interface:** `PadraoCorreveis` com `String correr()`.
+- **Estratégias:** `CorrerRapido`, `CorrerLento` e o objeto nulo `NaoCorre`.
+- **Patos concretos:** `PatoAtleta` usa `CorrerRapido` por padrão; os demais
+  herdam o objeto nulo `NaoCorre` definido em `Pato`.
+- **Modificação em `Pato`:** atributo `comportamentoCorrer`, setter
+  `setComportamentoCorrer()` e método `correr()` que delega. Igual à Parte B,
+  novos estilos de corrida exigem apenas novas implementações de
+  `PadraoCorreveis`.
+
 ### Parte C — Coelho via composição
 
 `Coelho` fica em `engsoft.jogo.patos`, não estende `Pato` e possui um
 `PadraoPulaveis`. Por padrão usa a estratégia `PuloCertinho`; o setter
 permite trocar em tempo de execução para qualquer estratégia existente —
 no demo a troca é para `PuloAlto`.
+
+### Parte D — delegação segura via objeto nulo
+
+`Pato` agora inicializa `comportamentoPato`, `comportamentoPulo` e
+`comportamentoCorrer` com instâncias de `NaoVoa`, `NaoPula` e `NaoCorre`,
+respectivamente. Isso elimina o risco de `NullPointerException` ao chamar
+`voar()`, `pular()` ou `correr()` em patos que não plugam aquela estratégia
+(como `PatoBorracha`), substituindo o erro por uma mensagem informativa do
+tipo *"Esse pato não pula."* — aplicação direta do padrão Null Object.
 
 ## Boas práticas aplicadas no código
 
@@ -199,6 +249,7 @@ no demo a troca é para `PuloAlto`.
 Ao executar `Main`, a saída é:
 
 ```
+===== PARTE A - COMPORTAMENTO DE VOAR =====
 Eu sou o Pato Ruivo.
 Pato Nadando.
 Voando como um pássaro. Velocidade: 10.0
@@ -215,9 +266,25 @@ Pulando de forma desordenada e caótica!
 Eu sou o Pato Atleta.
 Pulando de forma desordenada e caótica!
 
+===== PARTE B2 - COMPORTAMENTO DE CORRER =====
+Eu sou o Pato Atleta.
+Correndo bem rápido!
+Eu sou o Pato Louco.
+Correndo bem rápido!
+
+--- Pato Atleta trocando de comportamento ---
+Eu sou o Pato Atleta.
+Correndo devagar.
+
 ===== PARTE C - COELHO PULA =====
 Eu sou um Coelho!
 Pulando certinho.
 Coelho trocou de comportamento:
 Pulando bem alto!
+
+===== PARTE D - DELEGAÇÃO SEGURA (NULL-OBJECT) =====
+Olá, eu sou de Borracha.
+Esse pato não voa. Velocidade: 0.0
+Esse pato não pula.
+Esse pato não corre.
 ```
